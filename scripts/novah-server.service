@@ -1,0 +1,17 @@
+[Unit]
+Description=Novah App Server
+After=network.target
+
+[Service]
+Type=simple
+User=novah
+WorkingDirectory=/home/novah/system/novah_app/server
+ExecStart=/usr/bin/node /home/novah/.npm-global/bin/tsx src/index.ts
+Restart=always
+RestartSec=3
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=DATA_DIR=/home/novah/system/novah_app/data
+
+[Install]
+WantedBy=multi-user.target

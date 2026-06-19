@@ -1,0 +1,28 @@
+[Unit]
+Description=Novah App Kiosk (Chromium)
+After=network.target novah-server.service graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+User=novah
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/novah/.Xauthority
+ExecStartPre=/bin/sleep 4
+ExecStart=/usr/bin/chromium-browser \
+  --kiosk \
+  --app=http://localhost:3000 \
+  --no-sandbox \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --disable-translate \
+  --no-first-run \
+  --check-for-update-interval=31536000 \
+  --disable-pinch \
+  --overscroll-history-navigation=0 \
+  --disable-features=TranslateUI
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
