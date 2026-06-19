@@ -69,7 +69,7 @@ export default function App() {
 
   return (
     <div
-      className="relative w-full h-full overflow-hidden bg-navy flex flex-col"
+      className="relative w-full h-full overflow-hidden bg-navy text-cream flex flex-col"
       onClick={handleCornerClick}
     >
       {/* Background layers — absolutely positioned, don't affect flex */}
