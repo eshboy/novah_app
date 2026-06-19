@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api, Balance, Reward } from '../lib/api';
 import { sound } from '../lib/sound';
@@ -19,6 +19,7 @@ function buildTimeOptions(availableMinutes: number): number[] {
 export default function EarnedPlayScreen({ balance }: Props) {
   const { rewardId }              = useParams<{ rewardId: string }>();
   const navigate                  = useNavigate();
+  const { state }                 = useLocation() as { state: { autostart?: number } | null };
   const [reward, setReward]       = useState<Reward | null>(null);
   const [chosen, setChosen]       = useState<number | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
@@ -33,6 +34,12 @@ export default function EarnedPlayScreen({ balance }: Props) {
     api.rewards().then(rs => setReward(rs.find(r => r.id === Number(rewardId)) ?? null)).catch(() => {});
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [rewardId]);
+
+  useEffect(() => {
+    if (state?.autostart && state.autostart > 0 && !running && !done) {
+      startPlay(state.autostart);
+    }
+  }, [state?.autostart]);
 
   async function startPlay(mins: number) {
     if (mins > balance.minutes) return;

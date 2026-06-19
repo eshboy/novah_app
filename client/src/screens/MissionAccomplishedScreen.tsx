@@ -67,9 +67,9 @@ export default function MissionAccomplishedScreen({ balance }: Props) {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => navigate('/'), 8000);
+    const t = setTimeout(() => navigate(`/play/${rewardId}`, { state: { autostart: minutes } }), 8000);
     return () => clearTimeout(t);
-  }, [navigate]);
+  }, [navigate, rewardId, minutes]);
 
   return (
     <motion.div
@@ -152,13 +152,21 @@ export default function MissionAccomplishedScreen({ balance }: Props) {
         </motion.div>
 
         <motion.button
-          onClick={() => navigate(`/missions/${rewardId}`)}
-          className="px-10 py-3 rounded-xl font-display text-navy font-bold tracking-widest text-sm"
-          style={{ background: 'linear-gradient(135deg, #22D3EE, #4ADE80)' }}
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.82 }}
+          onClick={() => navigate(`/play/${rewardId}`, { state: { autostart: minutes } })}
+          className="px-10 py-4 rounded-2xl font-display text-navy font-bold tracking-widest text-lg mb-3"
+          style={{ background: 'linear-gradient(135deg, #4ADE80, #22D3EE)' }}
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.82 }}
           whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
         >
-          Do Another Mission
+          ▶ Start Playing! ({minutes} min)
+        </motion.button>
+
+        <motion.button
+          onClick={() => navigate(`/missions/${rewardId}`)}
+          className="font-body text-cream/40 hover:text-cream/70 text-sm transition-colors"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }}
+        >
+          Do another mission first
         </motion.button>
       </div>
     </motion.div>

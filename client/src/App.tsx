@@ -31,6 +31,8 @@ export default function App() {
   useEffect(() => {
     api.mode().then(r => setMode(r.mode)).catch(() => {});
     api.balance().then(setBalance).catch(() => {});
+    const interval = setInterval(() => api.balance().then(setBalance).catch(() => {}), 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
