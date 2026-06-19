@@ -135,9 +135,13 @@ export async function sendApprovalReminder(completionId: number) {
 // ── Inbound: group messages ───────────────────────────────────────────────────
 
 async function handleGroupMessage(msg: TelegramBot.Message) {
-  if (!msg.text || msg.chat.type === 'private') return;
-  const chatId = getSetting('telegram_chat_id');
-  if (!chatId || String(msg.chat.id) !== chatId) return;
+  if (!msg.text) return;
+  const chatIds   = getChatIds();
+  const msgChatId = String(msg.chat.id);
+  const isPrivate = msg.chat.type === 'private';
+  // Accept: group messages in configured chat, OR private DMs from any configured parent
+  if (!chatIds.includes(msgChatId) && !(isPrivate && chatIds.includes(String(msg.from?.id ?? '')))) return;
+  const chatId = isPrivate ? msgChatId : chatIds[0];
 
   const text      = msg.text.trim();
   const userId    = msg.from?.id ?? 0;
@@ -203,7 +207,7 @@ async function createTextMission(title: string, minutes: number, chatId: string,
   `).run(capitalised, `${addedBy} added this mission just for you!`, minutes);
 
   const mission = db.prepare('SELECT * FROM missions WHERE id = ?').get(result.lastInsertRowid) as Mission;
-  ioRef?.to('display').emit('missionAdded', { ...mission, active: true, is_temporary: true });
+  ioRef?.to('display').emit('missionAdded', { ...mission, active: true, is_temporary: true, addedBy });
 
   await bot!.sendMessage(
     chatId,

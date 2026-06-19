@@ -6,6 +6,7 @@ import { api, AppMode, Balance } from './lib/api';
 import StarField from './components/StarField';
 import TimeSky from './components/TimeSky';
 import BottomHUD from './components/BottomHUD';
+import CriticalMissionAlert from './components/CriticalMissionAlert';
 import RewardsScreen from './screens/RewardsScreen';
 import MissionsScreen from './screens/MissionsScreen';
 import MissionDetailScreen from './screens/MissionDetailScreen';
@@ -24,9 +25,10 @@ const CORNER_TAP_WINDOW = 1500;
 export default function App() {
   const navigate              = useNavigate();
   const location              = useLocation();
-  const [mode, setMode]       = useState<AppMode>('normal');
-  const [balance, setBalance] = useState<Balance>({ date: '', minutes: 0, softCapMinutes: 120 });
-  const cornerTaps            = useRef<number[]>([]);
+  const [mode, setMode]           = useState<AppMode>('normal');
+  const [balance, setBalance]     = useState<Balance>({ date: '', minutes: 0, softCapMinutes: 120 });
+  const [criticalMission, setCriticalMission] = useState<{ title: string; time_value: number; addedBy?: string } | null>(null);
+  const cornerTaps                = useRef<number[]>([]);
 
   useEffect(() => {
     api.mode().then(r => setMode(r.mode)).catch(() => {});
@@ -49,7 +51,10 @@ export default function App() {
     socket.on('balanceUpdate', (data) => {
       setBalance(prev => ({ ...prev, minutes: data.minutes, date: data.date }));
     });
-    return () => { socket.off('modeChange'); socket.off('balanceUpdate'); };
+    socket.on('missionAdded', (m: any) => {
+      if (m.is_temporary) setCriticalMission({ title: m.title, time_value: m.time_value, addedBy: m.addedBy });
+    });
+    return () => { socket.off('modeChange'); socket.off('balanceUpdate'); socket.off('missionAdded'); };
   }, [navigate, location.pathname]);
 
   useEffect(() => {
@@ -101,6 +106,8 @@ export default function App() {
 
       {/* Persistent 36px bottom HUD */}
       <BottomHUD balance={balance} mode={mode} />
+
+      <CriticalMissionAlert mission={criticalMission} onDismiss={() => setCriticalMission(null)} />
     </div>
   );
 }

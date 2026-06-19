@@ -76,6 +76,24 @@ export const sound = {
     });
   },
 
+  alert() {
+    play(c => {
+      // Three sharp alarm pulses
+      [0, 0.22, 0.44].forEach(offset => {
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.connect(g); g.connect(c.destination);
+        o.type = 'square';
+        o.frequency.setValueAtTime(880, c.currentTime + offset);
+        o.frequency.setValueAtTime(660, c.currentTime + offset + 0.1);
+        g.gain.setValueAtTime(0.18, c.currentTime + offset);
+        g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + offset + 0.18);
+        o.start(c.currentTime + offset);
+        o.stop(c.currentTime + offset + 0.18);
+      });
+    });
+  },
+
   timerDone() {
     play(c => {
       [440, 370].forEach((freq, i) => {
