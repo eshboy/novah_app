@@ -21,30 +21,48 @@ export function setupTelegram(io: Server<ClientToServerEvents, ServerToClientEve
   initBot(token);
 }
 
+let pollOffset = 0;
+let pollActive = false;
+
 export function initBot(token: string) {
-  if (bot) {
-    bot.stopPolling();
-    bot = null;
-  }
-  bot = new TelegramBot(token, {
-    polling: {
-      interval: 2000,
-      params: { timeout: 10, allowed_updates: ['message', 'callback_query'] },
-    },
-  });
+  if (bot) { try { bot.stopPolling(); } catch {} bot = null; }
+  pollActive = false;
 
-  bot.on('message', (msg) => {
-    if (msg.chat.type === 'private' && msg.text?.startsWith('/start')) {
-      console.log(`[Telegram] /start from ${msg.from?.first_name} — chat_id: ${msg.chat.id}`);
-      bot!.sendMessage(msg.chat.id, `👋 Hi ${msg.from?.first_name ?? 'there'}! You're connected to Novah's Mission Control. You'll receive mission approval requests here.`);
+  bot = new TelegramBot(token, { polling: false });
+
+  console.log('[Telegram] Bot started (manual polling).');
+  pollActive = true;
+  manualPoll(token);
+}
+
+async function manualPoll(token: string) {
+  while (pollActive) {
+    try {
+      const url = `https://api.telegram.org/bot${token}/getUpdates?offset=${pollOffset}&timeout=10&allowed_updates=${encodeURIComponent('["message","callback_query"]')}`;
+      const res  = await (fetch as typeof fetch)(url);
+      const data = await res.json() as { ok: boolean; result: any[] };
+      if (data.ok) {
+        for (const update of data.result) {
+          pollOffset = update.update_id + 1;
+          if (update.callback_query) {
+            handleCallback(update.callback_query as TelegramBot.CallbackQuery).catch(e =>
+              console.error('[Telegram] handleCallback error:', e)
+            );
+          } else if (update.message) {
+            const msg = update.message as TelegramBot.Message;
+            if (msg.chat.type === 'private' && msg.text?.startsWith('/start')) {
+              console.log(`[Telegram] /start from ${msg.from?.first_name} — chat_id: ${msg.chat.id}`);
+              bot!.sendMessage(msg.chat.id, `👋 Hi ${msg.from?.first_name ?? 'there'}! You're connected to Novah's Mission Control. You'll receive mission approval requests here.`);
+            }
+            handleGroupMessage(msg);
+          }
+        }
+      }
+    } catch (e: any) {
+      console.error('[Telegram] Poll error:', e.message);
+      await new Promise(r => setTimeout(r, 3000));
     }
-    handleGroupMessage(msg);
-  });
-  bot.on('callback_query', handleCallback);
-  bot.on('polling_error', (err) => console.error('[Telegram] Polling error:', err.message, err));
-  bot.on('error', (err) => console.error('[Telegram] Bot error:', err.message));
-
-  console.log('[Telegram] Bot started.');
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
