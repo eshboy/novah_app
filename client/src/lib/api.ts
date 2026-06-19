@@ -1,8 +1,8 @@
 export type AppMode = 'morning' | 'normal' | 'evening';
 
-export interface Reward    { id: number; name: string; emoji: string; color: string; sort_order: number }
+export interface Reward    { id: number; name: string; emoji: string; color: string; sort_order: number; active?: number }
 export interface Mission   { id: number; title: string; description: string; category: string; icon: string; time_value: number; daily_limit: number; is_temporary: boolean; available: boolean; completions_today: number }
-export interface Routine   { id: number; type: string; title: string; sort_order: number }
+export interface Routine   { id: number; type: string; title: string; sort_order: number; active?: number }
 export interface Balance   { date: string; minutes: number; softCapMinutes: number }
 
 async function req<T>(path: string, opts?: RequestInit): Promise<T> {
