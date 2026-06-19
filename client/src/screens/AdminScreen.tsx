@@ -286,7 +286,7 @@ function RewardsTab() {
   useEffect(() => { load(); }, [load]);
 
   async function toggle(r: any) {
-    await api.admin.updateReward(r.id, { active: !r.active });
+    await api.admin.updateReward(r.id, { active: r.active ? 0 : 1 });
     load();
   }
 
@@ -330,7 +330,7 @@ function RoutinesTab() {
   }
 
   async function toggleItem(r: any) {
-    await api.admin.updateRoutine(r.id, { active: !r.active });
+    await api.admin.updateRoutine(r.id, { active: r.active ? 0 : 1 });
     load();
   }
 
