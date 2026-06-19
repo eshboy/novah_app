@@ -26,7 +26,12 @@ export function initBot(token: string) {
     bot.stopPolling();
     bot = null;
   }
-  bot = new TelegramBot(token, { polling: true });
+  bot = new TelegramBot(token, {
+    polling: {
+      interval: 2000,
+      params: { timeout: 10, allowed_updates: ['message', 'callback_query'] },
+    },
+  });
 
   bot.on('message', (msg) => {
     if (msg.chat.type === 'private' && msg.text?.startsWith('/start')) {
@@ -36,7 +41,8 @@ export function initBot(token: string) {
     handleGroupMessage(msg);
   });
   bot.on('callback_query', handleCallback);
-  bot.on('polling_error', (err) => console.error('[Telegram] Polling error:', err.message));
+  bot.on('polling_error', (err) => console.error('[Telegram] Polling error:', err.message, err));
+  bot.on('error', (err) => console.error('[Telegram] Bot error:', err.message));
 
   console.log('[Telegram] Bot started.');
 }
