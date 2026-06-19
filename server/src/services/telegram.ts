@@ -215,8 +215,9 @@ async function handleDenialReply(msg: TelegramBot.Message, chatId: string, first
 // ── Callback handler ──────────────────────────────────────────────────────────
 
 async function handleCallback(query: TelegramBot.CallbackQuery) {
+  console.log('[Telegram] callback_query received:', query.data, 'from', query.from.first_name);
   if (!query.data || !ioRef) return;
-  await bot!.answerCallbackQuery(query.id);
+  try { await bot!.answerCallbackQuery(query.id); } catch(e) { console.error('[Telegram] answerCallbackQuery failed:', e); }
 
   const [action, idStr] = query.data.split(':');
   const completionId    = Number(idStr);
