@@ -120,6 +120,13 @@ export default function PendingApprovalScreen() {
         />
         <span className="font-display text-cyan/45 text-[9px] uppercase tracking-[0.22em]">Approval pending</span>
       </motion.div>
+
+      <button
+        onClick={() => navigate(`/missions/${rewardId}`)}
+        className="mt-10 font-body text-cream/25 hover:text-cream/50 text-sm transition-colors"
+      >
+        ← Pick a different mission
+      </button>
     </motion.div>
   );
 }
