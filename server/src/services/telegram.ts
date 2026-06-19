@@ -28,11 +28,24 @@ export function initBot(token: string) {
   }
   bot = new TelegramBot(token, { polling: true });
 
-  bot.on('message', handleGroupMessage);
+  bot.on('message', (msg) => {
+    if (msg.chat.type === 'private' && msg.text?.startsWith('/start')) {
+      console.log(`[Telegram] /start from ${msg.from?.first_name} — chat_id: ${msg.chat.id}`);
+      bot!.sendMessage(msg.chat.id, `👋 Hi ${msg.from?.first_name ?? 'there'}! You're connected to Novah's Mission Control. You'll receive mission approval requests here.`);
+    }
+    handleGroupMessage(msg);
+  });
   bot.on('callback_query', handleCallback);
   bot.on('polling_error', (err) => console.error('[Telegram] Polling error:', err.message));
 
   console.log('[Telegram] Bot started.');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getChatIds(): string[] {
+  const raw = getSetting('telegram_chat_id') ?? '';
+  return raw.split(',').map(s => s.trim()).filter(Boolean);
 }
 
 // ── Outbound: send approval request ──────────────────────────────────────────
@@ -42,8 +55,9 @@ export async function sendApprovalRequest(
   mission: Mission,
   elapsedSeconds: number
 ): Promise<number | null> {
-  const chatId = getSetting('telegram_chat_id');
-  if (!bot || !chatId) return null;
+  const chatIds = getChatIds();
+  if (!bot || chatIds.length === 0) return null;
+  const chatId = chatIds[0];
 
   const mins    = Math.floor(elapsedSeconds / 60);
   const secs    = elapsedSeconds % 60;
@@ -59,29 +73,34 @@ export async function sendApprovalRequest(
     isFast ? `\n⚠️ _Completed very quickly — check in before approving!_` : '',
   ].filter(Boolean).join('\n');
 
-  const msg = await bot.sendMessage(chatId, text, {
-    parse_mode: 'Markdown',
-    reply_markup: {
-      inline_keyboard: [[
-        { text: '✅ Approve', callback_data: `approve:${completionId}` },
-        { text: '❌ Deny',    callback_data: `deny:${completionId}` },
-      ]],
-    },
-  });
+  const keyboard = {
+    inline_keyboard: [[
+      { text: '✅ Approve', callback_data: `approve:${completionId}` },
+      { text: '❌ Deny',    callback_data: `deny:${completionId}` },
+    ]],
+  };
+
+  // Send to primary chat and get message_id; send silently to others
+  const msg = await bot.sendMessage(chatId, text, { parse_mode: 'Markdown', reply_markup: keyboard });
+  for (const id of chatIds.slice(1)) {
+    bot.sendMessage(id, text, { parse_mode: 'Markdown', reply_markup: keyboard }).catch(() => {});
+  }
 
   return msg.message_id;
 }
 
 export async function notifyRoutineComplete(type: 'morning' | 'evening') {
-  const chatId = getSetting('telegram_chat_id');
-  if (!bot || !chatId) return;
+  const chatIds = getChatIds();
+  if (!bot || chatIds.length === 0) return;
   const label = type === 'morning' ? '☀️ Morning' : '🌙 Evening';
-  await bot.sendMessage(chatId, `${label} routine complete! Novah checked everything off. 🎉`);
+  const text = `${label} routine complete! Novah checked everything off. 🎉`;
+  for (const id of chatIds) bot.sendMessage(id, text).catch(() => {});
 }
 
 export async function sendApprovalReminder(completionId: number) {
-  const chatId = getSetting('telegram_chat_id');
-  if (!bot || !chatId) return;
+  const chatIds = getChatIds();
+  if (!bot || chatIds.length === 0) return;
+  const chatId = chatIds[0];
   const db         = getDb();
   const completion = db.prepare('SELECT * FROM mission_completions WHERE id = ?').get(completionId) as MissionCompletion | undefined;
   if (!completion || completion.status !== 'pending') return;
@@ -202,7 +221,8 @@ async function handleCallback(query: TelegramBot.CallbackQuery) {
   const [action, idStr] = query.data.split(':');
   const completionId    = Number(idStr);
   const parentName      = query.from.first_name ?? 'A parent';
-  const chatId          = getSetting('telegram_chat_id');
+  const chatIds         = getChatIds();
+  const chatId          = chatIds[0] ?? null;
   const msgId           = query.message?.message_id;
 
   const db         = getDb();
