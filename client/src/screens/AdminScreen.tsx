@@ -450,8 +450,26 @@ function SettingsTab() {
           className="w-full py-3 rounded-xl font-display text-navy font-bold bg-cyan hover:bg-cyan/80 transition-colors">
           {saved ? '✅ Saved!' : 'Save Settings'}
         </button>
+
+        <ClearBalanceButton />
       </div>
     </TabFade>
+  );
+}
+
+function ClearBalanceButton() {
+  const [done, setDone] = useState(false);
+  async function clear() {
+    if (!confirm('Reset today\'s balance to 0?')) return;
+    await fetch('/api/admin/balance/clear', { method: 'POST' });
+    setDone(true);
+    setTimeout(() => setDone(false), 2000);
+  }
+  return (
+    <button onClick={clear}
+      className="w-full py-3 rounded-xl font-display font-bold border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors mt-2">
+      {done ? '✅ Balance cleared' : '🗑 Clear Today\'s Balance'}
+    </button>
   );
 }
 

@@ -148,6 +148,13 @@ export function adminRouter(io: Server<ClientToServerEvents, ServerToClientEvent
   });
 
   // ── History ───────────────────────────────────────────────────────────────
+  router.post('/balance/clear', requireAuth, (req, res) => {
+    const date = new Date().toISOString().slice(0, 10);
+    getDb().prepare('UPDATE earned_time SET minutes = 0 WHERE date = ?').run(date);
+    io.to('display').emit('balanceUpdate', { minutes: 0, date });
+    res.json({ ok: true });
+  });
+
   router.get('/history', requireAuth, (req, res) => {
     const limit = Number(req.query.limit ?? 50);
     const rows  = getDb().prepare(`
