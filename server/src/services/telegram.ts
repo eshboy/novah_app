@@ -157,13 +157,25 @@ async function handleGroupMessage(msg: TelegramBot.Message) {
     return;
   }
 
-  // Pattern: "task name 20" or "task name 20min" or "task name 20 min"
+  // "save Task name 20" → permanent mission
+  const saveMatch = text.match(/^save\s+(.+?)\s+(\d+)\s*(?:min(?:utes?)?)?$/i);
+  if (saveMatch) {
+    const taskText = saveMatch[1].trim();
+    const minutes  = Number(saveMatch[2]);
+    if (minutes >= 1 && minutes <= 120) {
+      await createTextMission(taskText, minutes, chatId, firstName, false);
+      return;
+    }
+  }
+
+  // "Task name 20" → one-time Mission Critical
   const withMinutes = text.match(/^(.+?)\s+(\d+)\s*(?:min(?:utes?)?)?$/i);
   if (withMinutes) {
     const taskText = withMinutes[1].trim();
     const minutes  = Number(withMinutes[2]);
-    if (minutes >= 1 && minutes <= 120) {
-      await createTextMission(taskText, minutes, chatId, firstName);
+    // Don't accidentally catch "save ..." without a number after task
+    if (minutes >= 1 && minutes <= 120 && !/^save$/i.test(taskText)) {
+      await createTextMission(taskText, minutes, chatId, firstName, true);
       return;
     }
   }
@@ -171,50 +183,60 @@ async function handleGroupMessage(msg: TelegramBot.Message) {
   // No number — ask for it
   const hasPending = pendingMissionText.has(userId);
   if (!hasPending) {
-    // Check if it looks like a task (not just a chat message)
-    // Only respond to messages that could plausibly be tasks (not short conversational texts)
     if (text.length > 3 && !text.includes('?')) {
-      pendingMissionText.set(userId, text);
+      const isSave = /^save\s+/i.test(text);
+      const cleanText = text.replace(/^save\s+/i, '');
+      pendingMissionText.set(userId, isSave ? `__save__${cleanText}` : cleanText);
       await bot!.sendMessage(
         chatId,
-        `Got it! How many minutes should "*${escMd(text)}*" earn? Reply with the number (e.g. \`15\`)`,
+        `Got it! How many minutes should "*${escMd(cleanText)}*" earn? Reply with the number (e.g. \`15\`)`,
         { parse_mode: 'Markdown', reply_to_message_id: msg.message_id }
       );
     }
     return;
   }
 
-  // Previous message was a pending task text — see if this is just a number
+  // Previous message was a pending task — see if this is just a number
   const justNumber = text.match(/^(\d+)$/);
   if (justNumber && hasPending) {
-    const minutes  = Number(justNumber[1]);
-    const taskText = pendingMissionText.get(userId)!;
+    const minutes   = Number(justNumber[1]);
+    const raw       = pendingMissionText.get(userId)!;
+    const permanent = raw.startsWith('__save__');
+    const taskText  = raw.replace(/^__save__/, '');
     pendingMissionText.delete(userId);
     if (minutes >= 1 && minutes <= 120) {
-      await createTextMission(taskText, minutes, chatId, firstName);
+      await createTextMission(taskText, minutes, chatId, firstName, !permanent);
     } else {
       await bot!.sendMessage(chatId, 'Please use a number between 1 and 120 minutes.');
     }
   }
 }
 
-async function createTextMission(title: string, minutes: number, chatId: string, addedBy: string) {
+async function createTextMission(title: string, minutes: number, chatId: string, addedBy: string, temporary: boolean) {
   const db = getDb();
   const capitalised = title.charAt(0).toUpperCase() + title.slice(1);
 
   const result = db.prepare(`
     INSERT INTO missions (title, description, category, icon, time_value, daily_limit, is_temporary)
-    VALUES (?, ?, 'special', '⭐', ?, 1, 1)
-  `).run(capitalised, `${addedBy} added this mission just for you!`, minutes);
+    VALUES (?, ?, 'special', '⭐', ?, 1, ?)
+  `).run(capitalised, `${addedBy} added this mission just for you!`, minutes, temporary ? 1 : 0);
 
   const mission = db.prepare('SELECT * FROM missions WHERE id = ?').get(result.lastInsertRowid) as Mission;
-  ioRef?.to('display').emit('missionAdded', { ...mission, active: true, is_temporary: true, addedBy });
+  ioRef?.to('display').emit('missionAdded', { ...mission, active: true, is_temporary: temporary, addedBy });
 
-  await bot!.sendMessage(
-    chatId,
-    `✅ *Mission added!*\n*${escMd(capitalised)}* — earns ${minutes} min\nIt's live for Novah now!`,
-    { parse_mode: 'Markdown' }
-  );
+  if (temporary) {
+    await bot!.sendMessage(
+      chatId,
+      `🚨 *Mission Critical sent!*\n*${escMd(capitalised)}* — earns ${minutes} min\nKiosk is flashing now. Disappears after he completes it.`,
+      { parse_mode: 'Markdown' }
+    );
+  } else {
+    await bot!.sendMessage(
+      chatId,
+      `📋 *Mission saved permanently!*\n*${escMd(capitalised)}* — earns ${minutes} min\nAdded to Novah's mission list. Manage it in the admin panel.`,
+      { parse_mode: 'Markdown' }
+    );
+  }
 }
 
 async function handleDenialReply(msg: TelegramBot.Message, chatId: string, firstName: string) {
