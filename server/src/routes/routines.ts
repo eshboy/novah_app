@@ -51,6 +51,10 @@ export function routinesRouter(io: Server<ClientToServerEvents, ServerToClientEv
     const allDone = allForType.every(r => completedIds.includes(r.id));
     if (allDone) {
       await notifyRoutineComplete(routine.type);
+      if (routine.type === 'morning') {
+        db.prepare("UPDATE settings SET value='normal' WHERE key='mode'").run();
+        io.to('display').emit('modeChange', 'normal');
+      }
     }
 
     res.json({ ok: true, completedIds, allDone });
