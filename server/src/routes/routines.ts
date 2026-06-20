@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { Server } from 'socket.io';
-import { getDb, localDate } from '../db/database';
+import { getDb, localDate, getSetting } from '../db/database';
 import { Routine, RoutineCompletion, ServerToClientEvents, ClientToServerEvents } from '../types';
 import { notifyRoutineComplete } from '../services/telegram';
 
@@ -49,15 +49,26 @@ export function routinesRouter(io: Server<ClientToServerEvents, ServerToClientEv
     io.to('display').emit('routineUpdate', { type: routine.type, completedIds });
 
     const allDone = allForType.every(r => completedIds.includes(r.id));
+    let earnedMinutes = 0;
     if (allDone) {
-      await notifyRoutineComplete(routine.type);
+      const settingKey = routine.type === 'morning' ? 'morning_routine_minutes' : 'evening_routine_minutes';
+      earnedMinutes = Number(getSetting(settingKey) ?? 20);
+      if (earnedMinutes > 0) {
+        db.prepare(`
+          INSERT INTO earned_time (date, minutes) VALUES (?, ?)
+          ON CONFLICT(date) DO UPDATE SET minutes = minutes + excluded.minutes
+        `).run(date, earnedMinutes);
+        const { minutes } = db.prepare('SELECT minutes FROM earned_time WHERE date = ?').get(date) as { minutes: number };
+        io.to('display').emit('balanceUpdate', { minutes, date });
+      }
+      await notifyRoutineComplete(routine.type, earnedMinutes);
       if (routine.type === 'morning') {
         db.prepare("UPDATE settings SET value='normal' WHERE key='mode'").run();
         io.to('display').emit('modeChange', 'normal');
       }
     }
 
-    res.json({ ok: true, completedIds, allDone });
+    res.json({ ok: true, completedIds, allDone, earnedMinutes });
   });
 
   return router;

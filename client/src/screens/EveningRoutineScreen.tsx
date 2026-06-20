@@ -10,6 +10,7 @@ export default function EveningRoutineScreen() {
   const [routines, setRoutines]         = useState<Routine[]>([]);
   const [completedIds, setCompletedIds]  = useState<number[]>([]);
   const [allDone, setAllDone]           = useState(false);
+  const [earnedMin, setEarnedMin]       = useState(0);
 
   useEffect(() => {
     api.routines('evening').then(({ routines, completedIds }) => {
@@ -34,7 +35,8 @@ export default function EveningRoutineScreen() {
       const res = await api.completeRoutine(id);
       setCompletedIds(res.completedIds);
       if (res.allDone) {
-        sound.approve();
+        sound.celebrate();
+        setEarnedMin(res.earnedMinutes ?? 20);
         setTimeout(() => setAllDone(true), 500);
       }
     } catch {}
@@ -133,7 +135,17 @@ export default function EveningRoutineScreen() {
             >
               Nice work today!
             </p>
-            <p className="font-body text-cream/45 text-sm mt-1">Sleep well, Commander Novah.</p>
+            {earnedMin > 0 && (
+              <motion.div
+                className="flex items-center justify-center gap-2 mt-3 px-5 py-2 rounded-xl border border-purple-400/40 bg-purple-400/10"
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                transition={{ type: 'spring', delay: 0.25 }}
+              >
+                <span className="text-lg">⏱</span>
+                <span className="font-display font-bold" style={{ color: '#C084FC' }}>+{earnedMin} min earned!</span>
+              </motion.div>
+            )}
+            <p className="font-body text-cream/45 text-sm mt-3">Sleep well, Commander Novah.</p>
           </motion.div>
         ) : (
           <p className="font-body text-cream/28 text-sm">Check them off when you're ready!</p>

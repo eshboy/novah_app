@@ -10,6 +10,7 @@ export default function MorningRoutineScreen() {
   const [routines, setRoutines]         = useState<Routine[]>([]);
   const [completedIds, setCompletedIds]  = useState<number[]>([]);
   const [allDone, setAllDone]           = useState(false);
+  const [earnedMin, setEarnedMin]       = useState(0);
 
   useEffect(() => {
     api.routines('morning').then(({ routines, completedIds }) => {
@@ -34,9 +35,9 @@ export default function MorningRoutineScreen() {
       const res = await api.completeRoutine(id);
       setCompletedIds(res.completedIds);
       if (res.allDone) {
-        sound.approve();
+        sound.celebrate();
+        setEarnedMin(res.earnedMinutes ?? 20);
         setTimeout(() => setAllDone(true), 600);
-        setTimeout(() => navigate('/'), 2400);
       }
     } catch {}
   }
@@ -134,7 +135,17 @@ export default function MorningRoutineScreen() {
           >
             <div className="text-4xl mb-2">🎉</div>
             <p className="font-display text-gold text-xl font-bold text-glow-gold">All done!</p>
-            <p className="font-body text-cream/52 text-sm mt-1">Mission Control unlocking…</p>
+            {earnedMin > 0 && (
+              <motion.div
+                className="flex items-center gap-2 mt-3 px-5 py-2 rounded-xl border border-gold/40 bg-gold/10"
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                transition={{ type: 'spring', delay: 0.25 }}
+              >
+                <span className="text-lg">⏱</span>
+                <span className="font-display text-gold font-bold">+{earnedMin} min earned!</span>
+              </motion.div>
+            )}
+            <p className="font-body text-cream/52 text-sm mt-3">Mission Control unlocking…</p>
           </motion.div>
         )}
       </div>

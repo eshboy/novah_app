@@ -20,7 +20,7 @@ export const api = {
 
   startMission:    (id: number)                     => req<{ completionId: number; mission: Mission }>(`/api/missions/${id}/start`, { method: 'POST' }),
   doneMission:     (completionId: number)           => req<{ ok: boolean }>(`/api/missions/completions/${completionId}/done`, { method: 'POST' }),
-  completeRoutine: (id: number)                     => req<{ ok: boolean; completedIds: number[]; allDone: boolean }>(`/api/routines/${id}/complete`, { method: 'POST' }),
+  completeRoutine: (id: number)                     => req<{ ok: boolean; completedIds: number[]; allDone: boolean; earnedMinutes: number }>(`/api/routines/${id}/complete`, { method: 'POST' }),
 
   startSession:    (rewardId: number, minutes: number) =>
     req<{ sessionId: number; durationSeconds: number; nearSoftCap: boolean; overSoftCap: boolean }>('/api/sessions/start', {

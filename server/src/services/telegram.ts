@@ -113,11 +113,12 @@ export async function sendApprovalRequest(
   return msg.message_id;
 }
 
-export async function notifyRoutineComplete(type: 'morning' | 'evening') {
+export async function notifyRoutineComplete(type: 'morning' | 'evening', earnedMinutes = 0) {
   const chatIds = getChatIds();
   if (!bot || chatIds.length === 0) return;
   const label = type === 'morning' ? '☀️ Morning' : '🌙 Evening';
-  const text = `${label} routine complete! Novah checked everything off. 🎉`;
+  const reward = earnedMinutes > 0 ? ` (+${earnedMinutes} min auto-awarded!)` : '';
+  const text = `${label} routine complete! Novah checked everything off. 🎉${reward}`;
   for (const id of chatIds) bot.sendMessage(id, text).catch(() => {});
 }
 

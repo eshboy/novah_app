@@ -117,7 +117,7 @@ export function adminRouter(io: Server<ClientToServerEvents, ServerToClientEvent
 
   // ── Settings ──────────────────────────────────────────────────────────────
   router.get('/settings', requireAuth, (_req, res) => {
-    const keys = ['soft_cap_minutes', 'morning_routine_start', 'evening_routine_start', 'display_name', 'approval_reminder_minutes', 'telegram_chat_id'];
+    const keys = ['soft_cap_minutes', 'morning_routine_start', 'evening_routine_start', 'display_name', 'approval_reminder_minutes', 'telegram_chat_id', 'morning_routine_minutes', 'evening_routine_minutes'];
     const rows = getDb().prepare(`SELECT key, value FROM settings WHERE key IN (${keys.map(() => '?').join(',')})`)
       .all(...keys) as { key: string; value: string }[];
     const out: Record<string, string> = {};
@@ -126,7 +126,7 @@ export function adminRouter(io: Server<ClientToServerEvents, ServerToClientEvent
   });
 
   router.put('/settings', requireAuth, (req, res) => {
-    const allowed = ['soft_cap_minutes', 'morning_routine_start', 'evening_routine_start', 'display_name', 'approval_reminder_minutes'];
+    const allowed = ['soft_cap_minutes', 'morning_routine_start', 'evening_routine_start', 'display_name', 'approval_reminder_minutes', 'morning_routine_minutes', 'evening_routine_minutes'];
     for (const key of allowed) {
       if (req.body[key] !== undefined) setSetting(key, String(req.body[key]));
     }
