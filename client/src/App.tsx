@@ -46,7 +46,8 @@ export default function App() {
                    location.pathname.startsWith('/accomplished');
       if (!idle) return;
       if (m === 'morning') navigate('/morning');
-      if (m === 'evening' && !location.pathname.startsWith('/admin')) navigate('/evening');
+      else if (m === 'evening' && !location.pathname.startsWith('/admin')) navigate('/evening');
+      else if (m === 'normal' && (location.pathname === '/morning' || location.pathname === '/evening')) navigate('/');
     });
     socket.on('balanceUpdate', (data) => {
       setBalance(prev => ({ ...prev, minutes: data.minutes, date: data.date }));
